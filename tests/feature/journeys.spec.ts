@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "../../.github/jim/playwright.js";
+import { expect, type Page, test } from "@playwright/test";
 
 // The app's key journeys: sign up, log in, and create a project and add a task.
 
