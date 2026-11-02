@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hashPassword, verifyPassword } from "../../src/auth/password.js";
 import { normaliseEmail } from "../../src/auth/users.js";
+import { strictSsl } from "../../src/db/db.js";
 
 describe("passwords", () => {
   it("verify against their own hash only", async () => {
@@ -22,5 +23,14 @@ describe("passwords", () => {
 describe("emails", () => {
   it("are trimmed and lower-cased", () => {
     expect(normaliseEmail("  Ann@Example.COM ")).toBe("ann@example.com");
+  });
+});
+
+describe("database URLs", () => {
+  it("ask for full certificate verification", () => {
+    expect(strictSsl("postgresql://u:p@host/db?sslmode=require&channel_binding=require")).toBe(
+      "postgresql://u:p@host/db?sslmode=verify-full&channel_binding=require",
+    );
+    expect(strictSsl("postgresql://u:p@host/db")).toBe("postgresql://u:p@host/db");
   });
 });
