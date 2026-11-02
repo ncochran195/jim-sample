@@ -1,0 +1,38 @@
+{
+  "name": "jim-sample",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A small team task tracker that JIM builds on during its live runs",
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "lint": "biome check . && tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:feature": "playwright test --project feature",
+    "db:schema": "tsx scripts/apply-schema.ts",
+    "db:seed-user": "tsx scripts/seed-user.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.5",
+    "hono": "4.13.16",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.4",
+    "@electric-sql/pglite": "0.5.14",
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
