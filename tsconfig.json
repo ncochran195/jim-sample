@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024", "dom"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
+  },
+  "include": ["src", "scripts", "tests", "playwright.config.ts", "vitest.config.ts"]
+}
