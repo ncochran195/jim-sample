@@ -13,7 +13,7 @@ A task belongs to a project. It has a title, a done state and an optional due da
 ## Interfaces (`tasks.ts`)
 
 - `Task`: `{ id, project_id, title, done, due_date: string | null, overdue: boolean }`. `due_date` is always `YYYY-MM-DD` text: SQL turns it into text with `to_char`, so no JS `Date` or time zone ever shifts it.
-- `parseDueDate(value)`: a missing or blank value gives `null` (no due date). A real calendar date in strict `YYYY-MM-DD` form (year 1 or later) gives that string. Anything else (`2030-02-30`, `soon`, `2030-6-15`) gives `undefined`, meaning invalid.
+- `parseDueDate(value)`: a missing or blank value gives `null` (no due date). A real calendar date in strict `YYYY-MM-DD` form, from 0001-01-01 to 9999-12-31 (two-digit years such as 0050 included), gives that string; year 0000 is not a real year. Anything else (`2030-02-30`, `soon`, `2030-6-15`) gives `undefined`, meaning invalid.
 - `listTasks(db, projectId)`: lists a project's tasks ordered by `due_date ASC NULLS LAST, id`. Earliest due comes first and undated tasks come last. Ties keep the order the tasks were added in. Done tasks are sorted by the same rule, not moved to the end.
 - `getTask(db, id)`: returns one task, or `undefined` if it doesn't exist.
 - `addTask(db, projectId, title, userId, dueDate = null)`.

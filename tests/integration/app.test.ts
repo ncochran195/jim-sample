@@ -144,12 +144,16 @@ describe("task due dates", () => {
       expect((await add(cookie, location, { title: "Bad", due_date })).status).toBe(400);
     }
     expect((await add(cookie, location, { title: "Blank", due_date: "" })).status).toBe(302);
+    expect(
+      (await add(cookie, location, { title: "Early year", due_date: "0050-01-01" })).status,
+    ).toBe(302);
     const rows = await db.query<{ title: string; due: string | null }>(
       "SELECT title, to_char(due_date, 'YYYY-MM-DD') AS due FROM tasks ORDER BY id",
     );
     expect(rows).toEqual([
       { title: "Dated", due: "2030-06-15" },
       { title: "Blank", due: null },
+      { title: "Early year", due: "0050-01-01" },
     ]);
   });
 

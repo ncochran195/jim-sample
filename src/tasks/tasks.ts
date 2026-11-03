@@ -27,7 +27,9 @@ export function parseDueDate(value: unknown): string | null | undefined {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
   if (!match) return undefined;
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  const date = new Date(Date.UTC(year, month - 1, day));
+  // setUTCFullYear, unlike Date.UTC, doesn't map years 0 to 99 onto 1900 to 1999.
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
   const real =
     year >= 1 &&
     date.getUTCFullYear() === year &&
