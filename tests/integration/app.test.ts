@@ -120,3 +120,89 @@ describe("projects and tasks", () => {
     expect((await app.request("/projects/999", { headers: { cookie } })).status).toBe(404);
   });
 });
+
+describe("task due dates", () => {
+  async function projectWithCookie() {
+    const cookie = await signUp();
+    const created = await app.request("/projects", {
+      ...form({ name: "Launch" }),
+      headers: { cookie },
+    });
+    return { cookie, location: created.headers.get("location") as string };
+  }
+
+  async function add(cookie: string, location: string, fields: Record<string, string>) {
+    return app.request(`${location}/tasks`, { ...form(fields), headers: { cookie } });
+  }
+
+  it("stores a valid due date and refuses an invalid one", async () => {
+    const { cookie, location } = await projectWithCookie();
+    expect((await add(cookie, location, { title: "Dated", due_date: "2030-06-15" })).status).toBe(
+      302,
+    );
+    for (const due_date of ["2030-02-30", "soon", "2030-6-15", "0000-01-01"]) {
+      expect((await add(cookie, location, { title: "Bad", due_date })).status).toBe(400);
+    }
+    expect((await add(cookie, location, { title: "Blank", due_date: "" })).status).toBe(302);
+    const rows = await db.query<{ title: string; due: string | null }>(
+      "SELECT title, to_char(due_date, 'YYYY-MM-DD') AS due FROM tasks ORDER BY id",
+    );
+    expect(rows).toEqual([
+      { title: "Dated", due: "2030-06-15" },
+      { title: "Blank", due: null },
+    ]);
+  });
+
+  it("lists earliest due first, undated last, and marks open overdue tasks", async () => {
+    const { cookie, location } = await projectWithCookie();
+    await add(cookie, location, { title: "Undated" });
+    await add(cookie, location, { title: "Later", due_date: "2030-03-01" });
+    await add(cookie, location, { title: "Past", due_date: "2020-01-01" });
+    const html = await (await app.request(location, { headers: { cookie } })).text();
+    const order = ["Past", "Later", "Undated"].map((t) => html.indexOf(`Edit: ${t}`));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(html).toContain("Due 2020-01-01");
+    expect(html.match(/class="overdue"/g)).toHaveLength(1);
+
+    const [past] = await db.query<{ id: number }>("SELECT id FROM tasks WHERE title = 'Past'");
+    await app.request(`/tasks/${past?.id}/toggle`, { method: "POST", headers: { cookie } });
+    const after = await (await app.request(location, { headers: { cookie } })).text();
+    expect(after).not.toContain('class="overdue"');
+  });
+
+  it("edits a task's title and due date, keeping its done state", async () => {
+    const { cookie, location } = await projectWithCookie();
+    await add(cookie, location, { title: "Venue", due_date: "2030-06-15" });
+    const [task] = await db.query<{ id: number }>("SELECT id FROM tasks");
+    await app.request(`/tasks/${task?.id}/toggle`, { method: "POST", headers: { cookie } });
+
+    const edit = await (
+      await app.request(`/tasks/${task?.id}/edit`, { headers: { cookie } })
+    ).text();
+    expect(edit).toContain('value="2030-06-15"');
+    expect(edit).toContain(`href="${location}"`);
+
+    const saved = await app.request(`/tasks/${task?.id}/edit`, {
+      ...form({ title: "Big venue", due_date: "" }),
+      headers: { cookie },
+    });
+    expect(saved.headers.get("location")).toBe(location);
+    const [row] = await db.query("SELECT title, due_date, done FROM tasks");
+    expect(row).toEqual({ title: "Big venue", due_date: null, done: true });
+  });
+
+  it("refuses an invalid edit and answers 404 for a missing task", async () => {
+    const { cookie, location } = await projectWithCookie();
+    await add(cookie, location, { title: "Venue" });
+    const [task] = await db.query<{ id: number }>("SELECT id FROM tasks");
+    const res = await app.request(`/tasks/${task?.id}/edit`, {
+      ...form({ title: "  ", due_date: "" }),
+      headers: { cookie },
+    });
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain("Give the task a title of 1 to 200 characters");
+    const [row] = await db.query<{ title: string }>("SELECT title FROM tasks");
+    expect(row?.title).toBe("Venue");
+    expect((await app.request("/tasks/999/edit", { headers: { cookie } })).status).toBe(404);
+  });
+});

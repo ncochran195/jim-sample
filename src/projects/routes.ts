@@ -66,6 +66,8 @@ export function projectRoutes(app: Hono<Env>, db: Db) {
         html`<form method="post" action="/projects/${project.id}/tasks">
             <label for="title">New task</label>
             <input id="title" name="title" type="text" maxlength="200" required />
+            <label for="due_date">Due date</label>
+            <input id="due_date" name="due_date" type="date" />
             <button>Add task</button>
           </form>
           ${
@@ -75,6 +77,9 @@ export function projectRoutes(app: Hono<Env>, db: Db) {
                   ${tasks.map(
                     (t) => html`<li>
                       <span class="${t.done ? "done" : ""}">${t.title}</span>
+                      ${t.due_date ? html`<span class="due">Due ${t.due_date}</span>` : ""}
+                      ${t.overdue ? html`<span class="overdue">Overdue</span>` : ""}
+                      <a href="/tasks/${t.id}/edit" aria-label="Edit: ${t.title}">Edit</a>
                       <form class="inline" method="post" action="/tasks/${t.id}/toggle">
                         <button aria-label="${t.done ? "Reopen" : "Mark done"}: ${t.title}">
                           ${t.done ? "Reopen" : "Mark done"}
