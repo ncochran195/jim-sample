@@ -1,0 +1,33 @@
+# Managed by JIM: changes come through JIM's template PRs, which a trusted
+# member reviews. JIM dispatches this on a release branch to deploy it to
+# stage. The stage environment admits only release/* branches, so nothing
+# else can reach its secrets. The Fly app is named after the repo:
+# <repo>-stage.
+name: deploy-stage
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-stage
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: stage
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Install flyctl
+        run: |
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+      - name: Deploy
+        run: flyctl deploy --remote-only --app "${{ github.event.repository.name }}-stage"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
