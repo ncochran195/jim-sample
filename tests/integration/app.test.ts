@@ -120,3 +120,109 @@ describe("projects and tasks", () => {
     expect((await app.request("/projects/999", { headers: { cookie } })).status).toBe(404);
   });
 });
+
+describe("task due dates", () => {
+  async function projectWithCookie() {
+    const cookie = await signUp();
+    const created = await app.request("/projects", {
+      ...form({ name: "Launch" }),
+      headers: { cookie },
+    });
+    return { cookie, location: created.headers.get("location") as string };
+  }
+
+  async function add(cookie: string, location: string, fields: Record<string, string>) {
+    const res = await app.request(`${location}/tasks`, { ...form(fields), headers: { cookie } });
+    expect(res.headers.get("location")).toBe(location);
+  }
+
+  async function tasks() {
+    return db.query<{ id: number; title: string; due_date: string | null }>(
+      "SELECT id, title, to_char(due_date, 'YYYY-MM-DD') AS due_date FROM tasks ORDER BY id",
+    );
+  }
+
+  it("stores a due date when adding, and none when it's left empty", async () => {
+    const { cookie, location } = await projectWithCookie();
+    await add(cookie, location, { title: "Book the venue", due_date: "2099-03-01" });
+    await add(cookie, location, { title: "Order snacks", due_date: "" });
+    await add(cookie, location, { title: "Old form" });
+    expect((await tasks()).map((t) => t.due_date)).toEqual(["2099-03-01", null, null]);
+  });
+
+  it("refuses to add a task with an invalid due date", async () => {
+    const { cookie, location } = await projectWithCookie();
+    await add(cookie, location, { title: "Bad", due_date: "2026-02-30" });
+    expect(await tasks()).toEqual([]);
+  });
+
+  it("shows due dates and Overdue, sorted by due date with undated last", async () => {
+    const { cookie, location } = await projectWithCookie();
+    await add(cookie, location, { title: "No date" });
+    await add(cookie, location, { title: "Later", due_date: "2099-06-01" });
+    await add(cookie, location, { title: "Long ago", due_date: "2020-01-15" });
+    const html = await (await app.request(location, { headers: { cookie } })).text();
+    expect(html).toContain('<label for="due_date">Due date</label>');
+    expect(html).toContain("Due 2099-06-01");
+    expect(html.match(/Overdue/g)).toHaveLength(1);
+    const order = ["Long ago", "Later", "No date"].map((t) => html.indexOf(`>${t}</span>`));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(html).toContain('aria-label="Edit: No date"');
+  });
+
+  it("edits a task's title and due date, and clears the date", async () => {
+    const { cookie, location } = await projectWithCookie();
+    await add(cookie, location, { title: "Book the venue", due_date: "2099-03-01" });
+    const [task] = await tasks();
+    const edit = `/tasks/${task?.id}/edit`;
+
+    const pageHtml = await (await app.request(edit, { headers: { cookie } })).text();
+    expect(pageHtml).toContain('value="Book the venue"');
+    expect(pageHtml).toContain('value="2099-03-01"');
+
+    let res = await app.request(edit, {
+      ...form({ title: "  Book the hall ", due_date: "2099-04-10" }),
+      headers: { cookie },
+    });
+    expect(res.headers.get("location")).toBe(location);
+    expect(await tasks()).toEqual([
+      { id: task?.id, title: "Book the hall", due_date: "2099-04-10" },
+    ]);
+
+    res = await app.request(edit, {
+      ...form({ title: "Book the hall", due_date: "" }),
+      headers: { cookie },
+    });
+    expect(res.headers.get("location")).toBe(location);
+    expect((await tasks())[0]?.due_date).toBeNull();
+  });
+
+  it("leaves the task unchanged on an invalid title or due date", async () => {
+    const { cookie, location } = await projectWithCookie();
+    await add(cookie, location, { title: "Keep me", due_date: "2099-05-20" });
+    const [task] = await tasks();
+    for (const fields of [
+      { title: "", due_date: "2099-01-01" },
+      { title: "   ", due_date: "2099-01-01" },
+      { title: "x".repeat(201), due_date: "2099-01-01" },
+      { title: "Changed", due_date: "2026-02-30" },
+    ]) {
+      const res = await app.request(`/tasks/${task?.id}/edit`, {
+        ...form(fields),
+        headers: { cookie },
+      });
+      expect(res.headers.get("location")).toBe(location);
+    }
+    expect(await tasks()).toEqual([{ id: task?.id, title: "Keep me", due_date: "2099-05-20" }]);
+  });
+
+  it("answers 404 for a task that doesn't exist, and needs sign-in", async () => {
+    const cookie = await signUp();
+    expect((await app.request("/tasks/999999999/edit", { headers: { cookie } })).status).toBe(404);
+    expect(
+      (await app.request("/tasks/999999999/edit", { ...form({ title: "x" }), headers: { cookie } }))
+        .status,
+    ).toBe(404);
+    expect((await app.request("/tasks/1/edit")).headers.get("location")).toBe("/login");
+  });
+});
