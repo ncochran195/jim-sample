@@ -2,7 +2,7 @@ import type { Hono } from "hono";
 import { html } from "hono/html";
 import { type Env, requireUser } from "../auth/routes.js";
 import type { Db } from "../db/db.js";
-import { listTasks } from "../tasks/tasks.js";
+import { isOverdue, listTasks, MAX_TITLE, todayUtc } from "../tasks/tasks.js";
 import { errorLine, page } from "../web/layout.js";
 import { createProject, getProject, listProjects } from "./projects.js";
 
@@ -28,6 +28,59 @@ async function projectsPage(db: Db, email: string, name = "", error?: string) {
               )}
             </ul>`
       }`,
+    email,
+  );
+}
+
+/** What the add-task form was given, shown again beside an error. */
+export interface TaskDraft {
+  title: string;
+  due: string;
+}
+
+/**
+ * A project's page: the add-task form and its task list, each task with its
+ * due date, "Overdue" tag, "Edit" link and done toggle.
+ */
+export async function projectPage(
+  db: Db,
+  project: { id: number; name: string },
+  email: string | undefined,
+  error?: string,
+  draft: TaskDraft = { title: "", due: "" },
+) {
+  const tasks = await listTasks(db, project.id);
+  const today = todayUtc();
+  return page(
+    project.name,
+    html`${errorLine(error)}
+      <form method="post" action="/projects/${project.id}/tasks">
+        <label for="title">New task</label>
+        <input id="title" name="title" type="text" value="${draft.title}" maxlength="${MAX_TITLE}" required />
+        <label for="due">Due date</label>
+        <input id="due" name="due" type="date" value="${draft.due}" />
+        <button>Add task</button>
+      </form>
+      ${
+        tasks.length === 0
+          ? html`<p>No tasks yet.</p>`
+          : html`<ul aria-label="Tasks">
+              ${tasks.map(
+                (t) => html`<li>
+                  <span class="${t.done ? "done" : ""}">${t.title}</span>
+                  ${t.due_date ? html`<span class="due">Due ${t.due_date}</span>` : ""}
+                  ${isOverdue(t, today) ? html`<span class="overdue">Overdue</span>` : ""}
+                  <a href="/tasks/${t.id}/edit" aria-label="Edit: ${t.title}">Edit</a>
+                  <form class="inline" method="post" action="/tasks/${t.id}/toggle">
+                    <button aria-label="${t.done ? "Reopen" : "Mark done"}: ${t.title}">
+                      ${t.done ? "Reopen" : "Mark done"}
+                    </button>
+                  </form>
+                </li>`,
+              )}
+            </ul>`
+      }
+      <p><a href="/projects">All projects</a></p>`,
     email,
   );
 }
@@ -59,34 +112,6 @@ export function projectRoutes(app: Hono<Env>, db: Db) {
   app.get("/projects/:id{[0-9]+}", async (c) => {
     const project = await getProject(db, Number(c.req.param("id")));
     if (!project) return c.notFound();
-    const tasks = await listTasks(db, project.id);
-    return c.html(
-      page(
-        project.name,
-        html`<form method="post" action="/projects/${project.id}/tasks">
-            <label for="title">New task</label>
-            <input id="title" name="title" type="text" maxlength="200" required />
-            <button>Add task</button>
-          </form>
-          ${
-            tasks.length === 0
-              ? html`<p>No tasks yet.</p>`
-              : html`<ul aria-label="Tasks">
-                  ${tasks.map(
-                    (t) => html`<li>
-                      <span class="${t.done ? "done" : ""}">${t.title}</span>
-                      <form class="inline" method="post" action="/tasks/${t.id}/toggle">
-                        <button aria-label="${t.done ? "Reopen" : "Mark done"}: ${t.title}">
-                          ${t.done ? "Reopen" : "Mark done"}
-                        </button>
-                      </form>
-                    </li>`,
-                  )}
-                </ul>`
-          }
-          <p><a href="/projects">All projects</a></p>`,
-        c.get("user")?.email,
-      ),
-    );
+    return c.html(await projectPage(db, project, c.get("user")?.email));
   });
 }
