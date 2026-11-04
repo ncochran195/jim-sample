@@ -16,9 +16,11 @@ export function page(title: string, body: Content, signedInAs?: string) {
       header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
       form.inline { display: inline; }
       label { display: block; margin-top: 0.75rem; }
-      input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 0.4rem; box-sizing: border-box; }
+      input[type="text"], input[type="email"], input[type="password"], input[type="date"] { width: 100%; padding: 0.4rem; box-sizing: border-box; }
       button { margin-top: 0.75rem; padding: 0.4rem 0.9rem; }
       .error { color: #b00020; }
+      .tag { font-size: 0.85em; font-weight: 600; border: 1px solid currentColor; border-radius: 0.25rem; padding: 0 0.3rem; margin-left: 0.4rem; }
+      .due { color: #444; margin-left: 0.4rem; }
       .done { text-decoration: line-through; color: #666; }
       ul { padding-left: 1.2rem; }
     </style>
