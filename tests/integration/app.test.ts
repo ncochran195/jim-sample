@@ -109,6 +109,39 @@ describe("projects and tasks", () => {
     expect(list).toContain("Launch</a> (0 open)");
   });
 
+  it("shows due dates, marks open overdue tasks and lists soonest due first", async () => {
+    const cookie = await signUp();
+    const created = await app.request("/projects", {
+      ...form({ name: "Home" }),
+      headers: { cookie },
+    });
+    const location = created.headers.get("location") as string;
+    const add = (title: string, due_date = "") =>
+      app.request(`${location}/tasks`, { ...form({ title, due_date }), headers: { cookie } });
+    await add("Later", "2031-03-01");
+    await add("No date");
+    await add("Old", "2020-01-15");
+    await add("Also later", "2031-03-01");
+    await add("Bad date", "2030-02-30");
+
+    const titles = await db.query<{ title: string }>("SELECT title FROM tasks ORDER BY id");
+    expect(titles.map((t) => t.title)).toEqual(["Later", "No date", "Old", "Also later"]);
+
+    const page = await (await app.request(location, { headers: { cookie } })).text();
+    const order = ["Old", "Later", "Also later", "No date"].map((t) =>
+      page.indexOf(`>${t}</span>`),
+    );
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(page).toContain("Due 2031-03-01");
+    expect(page.match(/Overdue/g)).toHaveLength(1);
+
+    const [old] = await db.query<{ id: number }>("SELECT id FROM tasks WHERE title = 'Old'");
+    await app.request(`/tasks/${old?.id}/toggle`, { method: "POST", headers: { cookie } });
+    const after = await (await app.request(location, { headers: { cookie } })).text();
+    expect(after).not.toContain("Overdue");
+    expect(after).toContain("Due 2020-01-15");
+  });
+
   it("refuses a project with no name", async () => {
     const cookie = await signUp();
     const res = await app.request("/projects", { ...form({ name: "  " }), headers: { cookie } });

@@ -20,6 +20,8 @@ export function page(title: string, body: Content, signedInAs?: string) {
       button { margin-top: 0.75rem; padding: 0.4rem 0.9rem; }
       .error { color: #b00020; }
       .done { text-decoration: line-through; color: #666; }
+      .due { color: #555; margin-left: 0.5rem; }
+      .overdue { color: #b00020; margin-left: 0.5rem; }
       ul { padding-left: 1.2rem; }
     </style>
   </head>
