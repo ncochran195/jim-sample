@@ -27,6 +27,7 @@ CREATE TABLE tasks (
   project_id    integer NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   title         text NOT NULL,
   done          boolean NOT NULL DEFAULT false,
+  due_date      date,
   created_by    integer NOT NULL REFERENCES users(id),
   created_at    timestamptz NOT NULL DEFAULT now()
 );
