@@ -32,9 +32,22 @@ The app never changes its own schema. `schema/schema.sql` is the reference schem
 ```sh
 DATABASE_URL=… npm run db:schema
 DATABASE_URL=… npm run db:seed-user -- <email> <password>
+DATABASE_URL=… npm run db:seed-demo -- <email>
 ```
 
 A schema change is a breaking change: its SQL is run by hand on QA, stage and prod, and `schema/schema.sql` is updated to match.
+
+## Data on QA and stage
+
+QA and stage are restored from a database that already holds the demo project, so a change can be checked against data from before it was deployed. The project **Team handbook**, the oldest project on the team, has three tasks, in the order they were added:
+
+| Task | Done |
+| --- | --- |
+| Write the welcome page | no |
+| List the tools we use | no |
+| Agree on a review rota | yes |
+
+Leave it as it is: change data you make yourself.
 
 ## Deploying
 

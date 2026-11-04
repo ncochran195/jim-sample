@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:feature": "playwright test --project feature",
     "db:schema": "tsx scripts/apply-schema.ts",
-    "db:seed-user": "tsx scripts/seed-user.ts"
+    "db:seed-user": "tsx scripts/seed-user.ts",
+    "db:seed-demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.5",
