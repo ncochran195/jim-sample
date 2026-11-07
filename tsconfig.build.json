@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src"],
-  // JIM's Steps and regression tests live beside each module; they are test
-  // code, built and run by Playwright, never shipped in the app.
-  "exclude": ["src/**/steps/**", "src/**/regression/**"]
+  // JIM's Steps, regression tests and fix-its live beside each module; they
+  // are test code, run by Playwright, never shipped in the app.
+  "exclude": ["src/**/steps/**", "src/**/regression/**", "src/**/fixit/**"]
 }
