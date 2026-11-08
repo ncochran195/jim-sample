@@ -2,7 +2,7 @@ import type { Hono } from "hono";
 import { type Env, requireUser } from "../auth/routes.js";
 import type { Db } from "../db/db.js";
 import { getProject } from "../projects/projects.js";
-import { addTask, toggleTask } from "./tasks.js";
+import { addTask, parseDueDate, toggleTask } from "./tasks.js";
 
 const MAX_TITLE = 200;
 
@@ -14,8 +14,12 @@ export function taskRoutes(app: Hono<Env>, db: Db) {
     if (!user) return c.redirect("/login");
     const project = await getProject(db, Number(c.req.param("id")));
     if (!project) return c.notFound();
-    const title = String((await c.req.parseBody()).title ?? "").trim();
-    if (title && title.length <= MAX_TITLE) await addTask(db, project.id, title, user.id);
+    const body = await c.req.parseBody();
+    const title = String(body.title ?? "").trim();
+    const dueDate = parseDueDate(String(body.due_date ?? ""));
+    if (title && title.length <= MAX_TITLE && dueDate !== undefined) {
+      await addTask(db, project.id, title, user.id, dueDate);
+    }
     return c.redirect(`/projects/${project.id}`);
   });
 

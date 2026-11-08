@@ -5,21 +5,51 @@ export interface Task {
   project_id: number;
   title: string;
   done: boolean;
+  /** The day it's due, as YYYY-MM-DD, or null when it has none. */
+  due_date: string | null;
+  /** Due before today and not done; a task due today isn't overdue. */
+  overdue: boolean;
 }
 
+/**
+ * A project's tasks, soonest due first and undated last. Tasks with the same
+ * due date, or none, keep the order they were added in.
+ */
 export function listTasks(db: Db, projectId: number) {
   return db.query<Task>(
-    "SELECT id, project_id, title, done FROM tasks WHERE project_id = $1 ORDER BY id",
+    `SELECT id, project_id, title, done,
+            to_char(due_date, 'YYYY-MM-DD') AS due_date,
+            (due_date <= CURRENT_DATE AND NOT done) AS overdue
+     FROM tasks WHERE project_id = $1
+     ORDER BY due_date ASC NULLS LAST, id`,
     [projectId],
   );
 }
 
-export async function addTask(db: Db, projectId: number, title: string, userId: number) {
-  await db.query("INSERT INTO tasks (project_id, title, created_by) VALUES ($1, $2, $3)", [
-    projectId,
-    title,
-    userId,
-  ]);
+/**
+ * Reads a due date from a form field: "" means none, a real calendar day as
+ * YYYY-MM-DD is that day, and anything else is undefined, not a due date.
+ */
+export function parseDueDate(raw: string): string | null | undefined {
+  const value = raw.trim();
+  if (value === "") return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  const day = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== value) return undefined;
+  return value;
+}
+
+export async function addTask(
+  db: Db,
+  projectId: number,
+  title: string,
+  userId: number,
+  dueDate: string | null = null,
+) {
+  await db.query(
+    "INSERT INTO tasks (project_id, title, created_by, due_date) VALUES ($1, $2, $3, $4)",
+    [projectId, title, userId, dueDate],
+  );
 }
 
 /** Flips a task between open and done, returning its project, if it exists. */
