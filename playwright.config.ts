@@ -1,9 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import { withJim } from "./.github/jim/playwright.js";
 
 // The app under test runs on PORT, so parallel runs never collide.
 const port = Number(process.env.PORT ?? 3100);
 
-export default defineConfig({
+const config = defineConfig({
   forbidOnly: !!process.env.CI,
   reporter: [["list"]],
   projects: [
@@ -21,3 +22,6 @@ export default defineConfig({
     reuseExistingServer: false,
   },
 });
+
+// JIM's qa project, from its fixture (see .github/jim/playwright.ts).
+export default withJim(config);
