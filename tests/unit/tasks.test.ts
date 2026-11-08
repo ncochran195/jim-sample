@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDueDate } from "../../src/tasks/tasks.js";
+import { overdueFor, parseDueDate } from "../../src/tasks/tasks.js";
 
 describe("due dates", () => {
   it("read an empty field as no due date", () => {
@@ -16,5 +16,12 @@ describe("due dates", () => {
     for (const raw of ["2030-02-30", "2029-02-29", "2030-13-01", "01/12/2030", "tomorrow"]) {
       expect(parseDueDate(raw)).toBeUndefined();
     }
+  });
+});
+
+describe("the overdue tooltip", () => {
+  it("says how many days a task is overdue", () => {
+    expect(overdueFor(1)).toBe("1 day overdue");
+    expect(overdueFor(3)).toBe("3 days overdue");
   });
 });

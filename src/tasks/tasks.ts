@@ -9,6 +9,13 @@ export interface Task {
   due_date: string | null;
   /** Due before today and not done; a task due today isn't overdue. */
   overdue: boolean;
+  /** How many days before today it was due, when it's overdue; 0 when it isn't. */
+  days_overdue: number;
+}
+
+/** How long an overdue task is overdue, for its marker's tooltip: "1 day overdue", "3 days overdue". */
+export function overdueFor(days: number): string {
+  return `${days} ${days === 1 ? "day" : "days"} overdue`;
 }
 
 /**
@@ -19,7 +26,9 @@ export function listTasks(db: Db, projectId: number) {
   return db.query<Task>(
     `SELECT id, project_id, title, done,
             to_char(due_date, 'YYYY-MM-DD') AS due_date,
-            (due_date < CURRENT_DATE AND NOT done) AS overdue
+            (due_date < CURRENT_DATE AND NOT done) AS overdue,
+            CASE WHEN due_date < CURRENT_DATE AND NOT done
+                 THEN CURRENT_DATE - due_date ELSE 0 END AS days_overdue
      FROM tasks WHERE project_id = $1
      ORDER BY due_date ASC NULLS LAST, id`,
     [projectId],
