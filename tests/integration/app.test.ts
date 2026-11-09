@@ -156,7 +156,7 @@ describe("due dates", () => {
 
   it("refuses a task whose due date isn't a real date", async () => {
     const { cookie, location } = await projectWithCookie();
-    for (const due_date of ["2030-02-30", "tomorrow", "2030-1-5"]) {
+    for (const due_date of ["2030-02-30", "tomorrow", "2030-1-5", "0000-01-01"]) {
       const res = await app.request(`${location}/tasks`, {
         ...form({ title: "Bad", due_date }),
         headers: { cookie },
@@ -219,7 +219,10 @@ describe("due dates", () => {
       );
     expect(await due()).toEqual([{ due_date: "2030-03-01" }]);
 
-    await app.request(edit, { ...form({ due_date: "not a date" }), headers: { cookie } });
+    for (const due_date of ["not a date", "2030-02-30", "0000-01-01"]) {
+      const refused = await app.request(edit, { ...form({ due_date }), headers: { cookie } });
+      expect(refused.headers.get("location")).toBe(location);
+    }
     expect(await due()).toEqual([{ due_date: "2030-03-01" }]);
 
     await app.request(edit, { ...form({ due_date: "" }), headers: { cookie } });

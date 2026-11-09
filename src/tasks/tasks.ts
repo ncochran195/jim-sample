@@ -77,6 +77,8 @@ export function parseDueDate(value: unknown): string | null | undefined {
   const text = String(value ?? "").trim();
   if (text === "") return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return undefined;
+  // Postgres's date type has no year 0, though JavaScript's Date accepts it.
+  if (Number(text.slice(0, 4)) < 1) return undefined;
   const date = new Date(`${text}T00:00:00Z`);
   if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== text) return undefined;
   return text;

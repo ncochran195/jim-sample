@@ -21,7 +21,7 @@ Stores a project's tasks and serves the routes that add them, mark them done or 
 - `addTask(db, projectId, title, userId, dueDate = null)`.
 - `setDueDate(db, id, dueDate | null)`: sets or clears the due date; returns the task's project id, or `undefined` if no such task.
 - `toggleTask(db, id)`: flips `done`; returns the project id, or `undefined`.
-- `parseDueDate(value)`: reads a submitted "Due date" field. Empty or missing → `null` (no due date); a real `YYYY-MM-DD` calendar date → that string; anything else (wrong shape, or a date like 2030-02-30) → `undefined`, meaning invalid.
+- `parseDueDate(value)`: reads a submitted "Due date" field. Empty or missing → `null` (no due date); a real `YYYY-MM-DD` calendar date → that string; anything else (wrong shape, a date like 2030-02-30, or year 0000, which Postgres's `date` has no room for though JavaScript's `Date` accepts it) → `undefined`, meaning invalid. Every date it accepts is one Postgres stores.
 
 ## Routes (`routes.ts`)
 
