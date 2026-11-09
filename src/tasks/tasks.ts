@@ -9,6 +9,8 @@ export interface Task {
   due_date: string | null;
   /** Open, with a due date before today in UTC. */
   overdue: boolean;
+  /** Whole days from the due date to today in UTC when overdue, otherwise null. */
+  days_overdue: number | null;
 }
 
 /**
@@ -16,9 +18,16 @@ export interface Task {
  * never passes through a JavaScript Date and its time zone; "today" is the
  * UTC calendar date, the time zone the apps run in.
  */
+const TODAY = "(now() AT TIME ZONE 'UTC')::date";
 const TASK_COLUMNS = `id, project_id, title, done,
   to_char(due_date, 'YYYY-MM-DD') AS due_date,
-  (NOT done AND due_date < (now() AT TIME ZONE 'UTC')::date) AS overdue`;
+  (NOT done AND due_date < ${TODAY}) AS overdue,
+  CASE WHEN NOT done AND due_date < ${TODAY} THEN ${TODAY} - due_date END AS days_overdue`;
+
+/** The "Overdue" tag's tooltip, such as "1 day overdue" or "3 days overdue". */
+export function overdueLabel(days: number) {
+  return `${days} ${days === 1 ? "day" : "days"} overdue`;
+}
 
 /** A project's tasks, earliest due date first, undated last, ties in the order added. */
 export function listTasks(db: Db, projectId: number) {

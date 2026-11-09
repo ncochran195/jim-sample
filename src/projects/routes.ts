@@ -2,7 +2,7 @@ import type { Hono } from "hono";
 import { html } from "hono/html";
 import { type Env, requireUser } from "../auth/routes.js";
 import type { Db } from "../db/db.js";
-import { listTasks } from "../tasks/tasks.js";
+import { listTasks, overdueLabel } from "../tasks/tasks.js";
 import { errorLine, page } from "../web/layout.js";
 import { createProject, getProject, listProjects } from "./projects.js";
 
@@ -80,7 +80,11 @@ export function projectRoutes(app: Hono<Env>, db: Db) {
                     (t) => html`<li>
                       <span class="${t.done ? "done" : ""}">${t.title}</span>
                       ${t.due_date ? html`<span class="due">Due ${t.due_date}</span>` : ""}
-                      ${t.overdue ? html`<span class="overdue">Overdue</span>` : ""}
+                      ${
+                        t.overdue && t.days_overdue !== null
+                          ? html`<span class="overdue" title="${overdueLabel(t.days_overdue)}">Overdue</span>`
+                          : ""
+                      }
                       <a href="/tasks/${t.id}/edit" aria-label="Edit: ${t.title}">Edit</a>
                       <form class="inline" method="post" action="/tasks/${t.id}/toggle">
                         <button aria-label="${t.done ? "Reopen" : "Mark done"}: ${t.title}">

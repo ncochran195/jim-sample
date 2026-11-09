@@ -13,6 +13,7 @@ Stores a project's tasks and serves the routes that add them, mark them done or 
 - `id`, `project_id`, `title`, `done`
 - `due_date`: `"YYYY-MM-DD"` or `null`. Formatted in SQL with `to_char`, so it never passes through a JavaScript `Date` or a time zone.
 - `overdue`: computed in SQL as open (`NOT done`) and `due_date` before today's **UTC** date (`(now() AT TIME ZONE 'UTC')::date`). A task due today is not overdue; an undated or done task never is.
+- `days_overdue`: when `overdue`, the whole days from the due date to today's UTC date (at least 1), computed in SQL as `today - due_date`; otherwise `null`.
 
 ## Functions (`tasks.ts`)
 
@@ -21,6 +22,7 @@ Stores a project's tasks and serves the routes that add them, mark them done or 
 - `addTask(db, projectId, title, userId, dueDate = null)`.
 - `setDueDate(db, id, dueDate | null)`: sets or clears the due date; returns the task's project id, or `undefined` if no such task.
 - `toggleTask(db, id)`: flips `done`; returns the project id, or `undefined`.
+- `overdueLabel(days)`: the "Overdue" tag's tooltip text, `"1 day overdue"` or `"<N> days overdue"`.
 - `parseDueDate(value)`: reads a submitted "Due date" field. Empty or missing → `null` (no due date); a real `YYYY-MM-DD` calendar date → that string; anything else (wrong shape, a date like 2030-02-30, or year 0000, which Postgres's `date` has no room for though JavaScript's `Date` accepts it) → `undefined`, meaning invalid. Every date it accepts is one Postgres stores.
 
 ## Routes (`routes.ts`)

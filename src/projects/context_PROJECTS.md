@@ -22,7 +22,7 @@ Projects and their pages. Everyone signed in sees every project. A project's pag
   3. "No tasks yet." when the project has none, otherwise the list `<ul aria-label="Tasks">` in `listTasks` order (earliest due first, undated last, ties in the order added). Each item shows:
      - the title in its own `<span>`, struck through (class `done`) when done;
      - `Due YYYY-MM-DD` (class `due`) when it has a due date;
-     - an `Overdue` tag (class `overdue`) when the task is overdue;
+     - an `Overdue` tag (class `overdue`) when the task is overdue, with a `title` tooltip saying how long it has been overdue, from `overdueLabel(days_overdue)`: "1 day overdue", "3 days overdue";
      - an "Edit" link to `/tasks/:id/edit`, labelled for screen readers `Edit: <title>`;
      - a "Mark done" / "Reopen" button, labelled `Mark done: <title>` / `Reopen: <title>`, posting to `/tasks/:id/toggle`.
   4. A link back to "All projects".

@@ -174,17 +174,22 @@ describe("due dates", () => {
     await add("Late", utcDate(-1));
     await add("Today", utcDate(0));
     await add("Done late", utcDate(-3));
+    await add("Very late", utcDate(-3));
     const [doneLate] = await db.query<{ id: number }>(
       "SELECT id FROM tasks WHERE title = 'Done late'",
     );
     await app.request(`/tasks/${doneLate?.id}/toggle`, { method: "POST", headers: { cookie } });
 
     const html = await (await app.request(location, { headers: { cookie } })).text();
-    const order = ["Done late", "Late", "Today", "Undated"].map((t) => html.indexOf(`>${t}<`));
+    const order = ["Done late", "Very late", "Late", "Today", "Undated"].map((t) =>
+      html.indexOf(`>${t}<`),
+    );
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(html).toContain(`Due ${utcDate(-1)}`);
-    expect(html.match(/>Overdue</g)).toHaveLength(1);
-    expect(html).toContain("1 overdue");
+    expect(html.match(/>Overdue</g)).toHaveLength(2);
+    expect(html).toContain('title="1 day overdue">Overdue<');
+    expect(html).toContain('title="3 days overdue">Overdue<');
+    expect(html).toContain(">2 overdue<");
   });
 
   it("shows no overdue count when nothing is overdue", async () => {
