@@ -2,7 +2,7 @@ import type { Hono } from "hono";
 import { html } from "hono/html";
 import { type Env, requireUser } from "../auth/routes.js";
 import type { Db } from "../db/db.js";
-import { listTasks } from "../tasks/tasks.js";
+import { listTasks, overdueLabel } from "../tasks/tasks.js";
 import { errorLine, page } from "../web/layout.js";
 import { createProject, getProject, listProjects } from "./projects.js";
 
@@ -60,14 +60,18 @@ export function projectRoutes(app: Hono<Env>, db: Db) {
     const project = await getProject(db, Number(c.req.param("id")));
     if (!project) return c.notFound();
     const tasks = await listTasks(db, project.id);
+    const overdue = tasks.filter((t) => t.overdue).length;
     return c.html(
       page(
         project.name,
         html`<form method="post" action="/projects/${project.id}/tasks">
             <label for="title">New task</label>
             <input id="title" name="title" type="text" maxlength="200" required />
+            <label for="due_date">Due date</label>
+            <input id="due_date" name="due_date" type="date" />
             <button>Add task</button>
           </form>
+          ${overdue > 0 ? html`<p class="overdue-count">${overdue} overdue</p>` : ""}
           ${
             tasks.length === 0
               ? html`<p>No tasks yet.</p>`
@@ -75,6 +79,13 @@ export function projectRoutes(app: Hono<Env>, db: Db) {
                   ${tasks.map(
                     (t) => html`<li>
                       <span class="${t.done ? "done" : ""}">${t.title}</span>
+                      ${t.due_date ? html`<span class="due">Due ${t.due_date}</span>` : ""}
+                      ${
+                        t.overdue && t.days_overdue !== null
+                          ? html`<span class="overdue" title="${overdueLabel(t.days_overdue)}">Overdue</span>`
+                          : ""
+                      }
+                      <a href="/tasks/${t.id}/edit" aria-label="Edit: ${t.title}">Edit</a>
                       <form class="inline" method="post" action="/tasks/${t.id}/toggle">
                         <button aria-label="${t.done ? "Reopen" : "Mark done"}: ${t.title}">
                           ${t.done ? "Reopen" : "Mark done"}
