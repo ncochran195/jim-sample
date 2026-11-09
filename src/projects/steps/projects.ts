@@ -19,3 +19,15 @@ export async function openProject(page: Page, name: string) {
   await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
   return page.url();
 }
+
+/**
+ * The Projects page's row for the project named exactly `name`, the newest
+ * when several share the name. Its text ends with the "(N open)" count.
+ */
+export function projectRow(page: Page, name: string) {
+  return page
+    .getByRole("main")
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("link", { name, exact: true }) })
+    .first();
+}
