@@ -32,3 +32,13 @@ CREATE TABLE tasks (
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX tasks_by_project ON tasks(project_id, id);
+
+CREATE TABLE subtasks (
+  id            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  task_id       integer NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  title         text NOT NULL,
+  done          boolean NOT NULL DEFAULT false,
+  created_by    integer NOT NULL REFERENCES users(id),
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX subtasks_by_task ON subtasks(task_id, id);

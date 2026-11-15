@@ -21,6 +21,7 @@ export function page(title: string, body: Content, signedInAs?: string) {
       .error { color: #b00020; }
       .done { text-decoration: line-through; color: #666; }
       .due { color: #444; margin-left: 0.5rem; }
+      .subtasks { color: #444; margin-left: 0.5rem; }
       .overdue-count { color: #b00020; font-weight: 600; }
       .overdue { color: #fff; background: #b00020; border-radius: 0.25rem; padding: 0 0.35rem; margin-left: 0.5rem; font-size: 0.85em; font-weight: 600; }
       ul { padding-left: 1.2rem; }

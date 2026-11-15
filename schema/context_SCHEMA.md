@@ -10,6 +10,7 @@
 - `sessions`: `token` (primary key), `user_id` (cascade-deleted with the user), `expires_at`.
 - `projects`: `id`, `name`, `created_by`, `created_at`.
 - `tasks`: `id`, `project_id` (cascade-deleted with the project), `title`, `done` (default false), `due_date` (nullable `date`, no default: a calendar date with no time, null meaning no due date), `created_by`, `created_at`. Index `tasks_by_project` on `(project_id, id)`.
+- `subtasks`: `id`, `task_id` (cascade-deleted with the task), `title`, `done` (default false), `created_by`, `created_at`. Index `subtasks_by_task` on `(task_id, id)`. One level deep: subtasks have no subtasks or due dates of their own.
 
 ## Applying changes to existing databases
 
@@ -20,3 +21,12 @@ ALTER TABLE tasks ADD COLUMN due_date date;
 ```
 
 Existing rows get null, so tasks from before the change have no due date.
+
+The `subtasks` table was added after QA, stage and prod were created; existing databases need:
+
+```sql
+CREATE TABLE subtasks (id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY, task_id integer NOT NULL REFERENCES tasks(id) ON DELETE CASCADE, title text NOT NULL, done boolean NOT NULL DEFAULT false, created_by integer NOT NULL REFERENCES users(id), created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX subtasks_by_task ON subtasks(task_id, id);
+```
+
+The table starts empty, so tasks from before the change have no subtasks.
