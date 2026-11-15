@@ -23,6 +23,7 @@ Projects and their pages. Everyone signed in sees every project. A project's pag
      - the title in its own `<span>`, struck through (class `done`) when done;
      - `Due YYYY-MM-DD` (class `due`) when it has a due date;
      - an `Overdue` tag (class `overdue`) when the task is overdue, with a `title` tooltip saying how long it has been overdue, from `overdueLabel(days_overdue)`: "1 day overdue", "3 days overdue";
+     - `<done>/<total> subtasks done` (class `subtasks`), from `subtaskProgress` and `progressLabel` in `src/tasks/subtasks.ts`, when the task has subtasks; nothing when it has none;
      - an "Edit" link to `/tasks/:id/edit`, labelled for screen readers `Edit: <title>`;
      - a "Mark done" / "Reopen" button, labelled `Mark done: <title>` / `Reopen: <title>`, posting to `/tasks/:id/toggle`.
   4. A link back to "All projects".
@@ -32,4 +33,5 @@ Projects and their pages. Everyone signed in sees every project. A project's pag
 ## Invariants
 
 - All page text is rendered through `hono/html`, which escapes interpolated values.
+- Subtasks appear on the project page only as the progress text; they never count towards "(N open)", the overdue count or the task order.
 - The overdue tag and the overdue count use the same `overdue` flag from `src/tasks/`, so they always agree.

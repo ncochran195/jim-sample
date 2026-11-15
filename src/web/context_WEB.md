@@ -13,8 +13,9 @@ The page frame and shared styling every screen uses (`layout.ts`).
 
 - Text, email, password and date inputs are full width.
 - `.error`: the error colour, `#b00020`.
-- `.done`: struck through and grey, for done tasks.
+- `.done`: struck through and grey, for done tasks and subtasks.
 - `.due`: a task's "Due YYYY-MM-DD" text, muted, spaced from the title.
+- `.subtasks`: a task's "<done>/<total> subtasks done" text, muted and spaced like `.due`.
 - `.overdue`: the "Overdue" tag: white bold text on the error colour, as a small rounded badge, so it stands apart from the title.
 - `.overdue-count`: the "N overdue" line above a project's task list, bold in the error colour.
 - `form.inline`: forms shown inline, such as the "Mark done" buttons and "Log out".

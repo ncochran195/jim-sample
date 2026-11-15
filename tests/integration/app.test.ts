@@ -245,3 +245,98 @@ describe("due dates", () => {
     expect(signedOut.headers.get("location")).toBe("/login");
   });
 });
+
+describe("subtasks", () => {
+  /** Signs up, creates a project with one task, and returns the task's edit page. */
+  async function taskWithCookie(title = "Plan offsite") {
+    const cookie = await signUp();
+    const created = await app.request("/projects", {
+      ...form({ name: "Offsite" }),
+      headers: { cookie },
+    });
+    const location = created.headers.get("location") as string;
+    await app.request(`${location}/tasks`, { ...form({ title }), headers: { cookie } });
+    const [task] = await db.query<{ id: number }>("SELECT id FROM tasks ORDER BY id DESC LIMIT 1");
+    return { cookie, location, id: task?.id as number, edit: `/tasks/${task?.id}/edit` };
+  }
+
+  const titles = () =>
+    db.query<{ title: string; done: boolean }>("SELECT title, done FROM subtasks ORDER BY id");
+
+  it("shows an empty Subtasks section on the edit page", async () => {
+    const { cookie, edit } = await taskWithCookie();
+    const html = await (await app.request(edit, { headers: { cookie } })).text();
+    expect(html).toContain("<h2>Subtasks</h2>");
+    expect(html).toContain("No subtasks yet.");
+    expect(html).toContain('<label for="subtask_title">New subtask</label>');
+    expect(html).toMatch(/name="title" type="text" maxlength="200" required/);
+  });
+
+  it("adds trimmed subtasks in order, refusing empty and over-long titles", async () => {
+    const { cookie, id, edit } = await taskWithCookie();
+    const add = (title: string) =>
+      app.request(`/tasks/${id}/subtasks`, { ...form({ title }), headers: { cookie } });
+    for (const title of ["  Book a venue  ", "", "   ", "a".repeat(201), "a".repeat(200)]) {
+      expect((await add(title)).headers.get("location")).toBe(edit);
+    }
+    expect(await titles()).toEqual([
+      { title: "Book a venue", done: false },
+      { title: "a".repeat(200), done: false },
+    ]);
+    const html = await (await app.request(edit, { headers: { cookie } })).text();
+    expect(html).toContain('<ul aria-label="Subtasks">');
+    expect(html).not.toContain("No subtasks yet.");
+    expect(html).toContain('aria-label="Mark done: Book a venue"');
+  });
+
+  it("escapes subtask titles", async () => {
+    const { cookie, id, edit } = await taskWithCookie();
+    await app.request(`/tasks/${id}/subtasks`, {
+      ...form({ title: "<b>bold</b>" }),
+      headers: { cookie },
+    });
+    const html = await (await app.request(edit, { headers: { cookie } })).text();
+    expect(html).toContain("&lt;b&gt;bold&lt;/b&gt;");
+    expect(html).not.toContain("<b>bold</b>");
+  });
+
+  it("toggles a subtask and shows progress on the project page, never counting it as a task", async () => {
+    const { cookie, id, edit, location } = await taskWithCookie();
+    await app.request(`${location}/tasks`, {
+      ...form({ title: "Write minutes" }),
+      headers: { cookie },
+    });
+    for (const title of ["Book a venue", "Send invites", "Order food"]) {
+      await app.request(`/tasks/${id}/subtasks`, { ...form({ title }), headers: { cookie } });
+    }
+    const [first] = await db.query<{ id: number }>("SELECT id FROM subtasks ORDER BY id LIMIT 1");
+    const toggled = await app.request(`/subtasks/${first?.id}/toggle`, {
+      method: "POST",
+      headers: { cookie },
+    });
+    expect(toggled.headers.get("location")).toBe(edit);
+    expect((await titles()).map((s) => s.done)).toEqual([true, false, false]);
+
+    const editHtml = await (await app.request(edit, { headers: { cookie } })).text();
+    expect(editHtml).toContain('<span class="done">Book a venue</span>');
+    expect(editHtml).toContain('aria-label="Reopen: Book a venue"');
+
+    const projectHtml = await (await app.request(location, { headers: { cookie } })).text();
+    expect(projectHtml).toContain('<span class="subtasks">1/3 subtasks done</span>');
+    expect(projectHtml.match(/subtasks done/g)).toHaveLength(1);
+
+    await app.request(`/tasks/${id}/toggle`, { method: "POST", headers: { cookie } });
+    expect((await titles()).map((s) => s.done)).toEqual([true, false, false]);
+    const projects = await (await app.request("/projects", { headers: { cookie } })).text();
+    expect(projects).toContain("(1 open)");
+  });
+
+  it("answers 404 for unknown tasks and subtasks, and asks signed-out people to log in", async () => {
+    const cookie = await signUp();
+    const post = { ...form({ title: "x" }), headers: { cookie } };
+    expect((await app.request("/tasks/999/subtasks", post)).status).toBe(404);
+    expect((await app.request("/subtasks/999/toggle", post)).status).toBe(404);
+    const signedOut = await app.request("/subtasks/1/toggle", { method: "POST" });
+    expect(signedOut.headers.get("location")).toBe("/login");
+  });
+});

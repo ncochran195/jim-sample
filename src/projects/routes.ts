@@ -2,11 +2,17 @@ import type { Hono } from "hono";
 import { html } from "hono/html";
 import { type Env, requireUser } from "../auth/routes.js";
 import type { Db } from "../db/db.js";
+import { progressLabel, type SubtaskProgress, subtaskProgress } from "../tasks/subtasks.js";
 import { listTasks, overdueLabel } from "../tasks/tasks.js";
 import { errorLine, page } from "../web/layout.js";
 import { createProject, getProject, listProjects } from "./projects.js";
 
 const MAX_NAME = 100;
+
+/** A task row's "<done>/<total> subtasks done" text, or nothing when it has no subtasks. */
+function subtasksTag(progress?: SubtaskProgress) {
+  return progress ? html`<span class="subtasks">${progressLabel(progress)}</span>` : "";
+}
 
 async function projectsPage(db: Db, email: string, name = "", error?: string) {
   const projects = await listProjects(db);
@@ -60,6 +66,7 @@ export function projectRoutes(app: Hono<Env>, db: Db) {
     const project = await getProject(db, Number(c.req.param("id")));
     if (!project) return c.notFound();
     const tasks = await listTasks(db, project.id);
+    const progress = await subtaskProgress(db, project.id);
     const overdue = tasks.filter((t) => t.overdue).length;
     return c.html(
       page(
@@ -85,6 +92,7 @@ export function projectRoutes(app: Hono<Env>, db: Db) {
                           ? html`<span class="overdue" title="${overdueLabel(t.days_overdue)}">Overdue</span>`
                           : ""
                       }
+                      ${subtasksTag(progress.get(t.id))}
                       <a href="/tasks/${t.id}/edit" aria-label="Edit: ${t.title}">Edit</a>
                       <form class="inline" method="post" action="/tasks/${t.id}/toggle">
                         <button aria-label="${t.done ? "Reopen" : "Mark done"}: ${t.title}">
